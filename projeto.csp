@@ -1,0 +1,190 @@
+-- CONSTANTES
+
+MaxEstudantes = 5
+MaxMesa = 3
+MaxRU = 5
+
+-- TIPOS
+
+Estudantes = {1..MaxEstudantes}
+datatype t_caixas = Caixa1 | Caixa2
+datatype Lixo = Lixeira1
+datatype t_catraca = Catraca1 | Catraca2
+t_cadeiras = {1..MaxMesa} 
+
+-- FUNCOES
+
+proxEstudante(ultimo) = if (ultimo == MaxEstudantes) then 1 else ultimo+1
+
+talherDireito(t_esquerdo) = if (t_esquerdo == MaxMesa) then 1 else t_esquerdo+1
+talherEsquerdo(t_direito) = if (t_direito == 1) then MaxMesa else t_direito-1
+
+-- CANAIS
+
+channel pegarBandeija, pegarPrato, pegarSuco, procurarCadeira, entrouFilaTiquete,
+		desistiuFilaTiquete, comer, beberSuco, sairRestaurante, entrarFilaComida, 
+		chegouRU, entrouFilaComida, pegarComida, sairFilaComida, procurarLixo,
+		guardarBandeija, guardarPratoSujo:Estudantes
+
+channel sentarCadeira, levantarCadeira:Estudantes.t_cadeiras
+
+channel entrarCaixa,comprarTiquete,sairCaixa:t_caixas.Estudantes
+
+channel entrouFilaEntrada,passarCatraca:t_catraca.Estudantes
+
+channel pegarTalher, devolverTalher:t_cadeiras.t_cadeiras
+
+channel jogarRestoComida, jogarCopo:Lixo.Estudantes
+
+
+-- PROCESSOS
+
+NovosEstudantes(ultimo) = let prox = proxEstudante(ultimo) within
+						  	chegouRU!prox -> ( ( entrouFilaTiquete!(prox) -> NovosEstudantes(prox) ) 
+							  				|~| desistiuFilaTiquete!(prox) -> NovosEstudantes(prox) )
+
+FilaTiquete(filaT) = 
+	chegouRU?estudante -> (( entrouFilaTiquete.estudante -> FilaTiquete(filaT^<estudante>) ) 
+						  [] desistiuFilaTiquete.estudante -> FilaTiquete(filaT))
+[]
+	if (length(filaT) > 0) then 
+		let estudante = head(filaT) within
+			entrarCaixa?caixa!estudante -> (FilaTiquete(tail(filaT)) ||| 
+			comprarTiquete.caixa.estudante -> sairCaixa.caixa.estudante
+			->  if (estudante%2 == 1) then 
+					entrouFilaEntrada!Catraca1!estudante -> STOP
+				else entrouFilaEntrada!Catraca2!estudante -> STOP)
+
+	else FilaTiquete(filaT)
+
+
+Caixa(n) = entrarCaixa.n?e -> comprarTiquete.n.e -> sairCaixa.n.e -> Caixa(n)
+
+Caixas = ||| n:t_caixas @ Caixa(n)
+
+EntradaRU = NovosEstudantes(3) [|{|chegouRU, entrouFilaTiquete, desistiuFilaTiquete|}|] FilaTiquete(<1,2,3>)
+
+ComprarIngresso = Caixas [|{|entrarCaixa, comprarTiquete, sairCaixa|}|] EntradaRU
+
+
+
+
+FilaCatraca(n) = 
+	entrouFilaEntrada.n?estudante -> passarCatraca!n!estudante -> 
+		(FilaCatraca(n) ||| entrouFilaComida!estudante -> STOP)
+
+FilasEntrada = ||| n:t_catraca @ FilaCatraca(n)
+
+		
+Organizadora(total) = 
+	-- Quando um estudante sair, decrementa o total
+	sairRestaurante?estudante -> Organizadora(total-1)
+[]
+	if (total < MaxRU) then
+		(passarCatraca?c?estudante -> Organizadora(total+1))
+	else Organizadora(total)
+
+IngressoCatraca = ComprarIngresso [|{|entrouFilaEntrada|}|] FilasEntrada
+
+CatracaRU = IngressoCatraca [|{|passarCatraca|}|] Organizadora(1)
+
+
+
+
+-- Mulheres responsáveis por entregar o almoço, cada uma é resposável por 2 etapas 
+Cozinheira_1 = pegarBandeija?e -> pegarPrato?e -> Cozinheira_1
+Cozinheira_2 = pegarComida?e -> pegarSuco?e -> Cozinheira_2
+
+FilaComida =
+	entrouFilaComida?estudante -> (FilaComida ||| pegarBandeija!estudante -> 
+								   	pegarPrato!estudante -> pegarComida!estudante -> 
+									pegarSuco!estudante -> procurarCadeira!estudante -> STOP)
+
+Cozinheiras = Cozinheira_1 ||| Cozinheira_2 
+
+FazerPrato = FilaComida [|{|pegarBandeija, pegarPrato, pegarComida, pegarSuco|}|] Cozinheiras
+
+EntrarFilaComida = CatracaRU [|{|entrouFilaComida|}|] FazerPrato
+
+Sentar = procurarCadeira?estudante -> (Sentar ||| sentarCadeira!estudante?c -> STOP)
+
+BuscarAssento = EntrarFilaComida [|{|procurarCadeira|}|] Sentar
+
+
+
+
+Cadeira(c) = sentarCadeira?estudante!c -> pegarTalher!c!c -> pegarTalher!c!talherDireito(c)
+			 -> comer.estudante -> devolverTalher!c!talherDireito(c) -> devolverTalher!c!c 
+			 -> beberSuco.estudante -> levantarCadeira.estudante.c
+			 -> (Cadeira(c) ||| procurarLixo!estudante -> STOP)
+
+
+Mesa = ||| c:t_cadeiras @ Cadeira(c)
+
+Talher(t) = pegarTalher!t!t -> devolverTalher!t!t -> Talher(t)
+            [] 
+            pegarTalher!talherEsquerdo(t)!t -> devolverTalher!talherEsquerdo(t)!t -> Talher(t)
+
+Talheres = ||| t:t_cadeiras @ Talher(t)
+
+JantarFilosofos = Mesa [|{|pegarTalher, devolverTalher|}|] Talheres
+
+Comer = BuscarAssento [|{|sentarCadeira|}|] JantarFilosofos -- JantarFilosofosInteligentes
+
+
+
+
+Retirar = procurarLixo?estudante -> (Retirar ||| jogarRestoComida?lixeira!estudante 
+									-> jogarCopo.lixeira.estudante -> guardarBandeija!estudante 
+									-> guardarPratoSujo!estudante -> sairRestaurante!estudante -> STOP)
+
+Lixeira(l) = jogarRestoComida!l?e -> jogarCopo.l.e -> Lixeira(l)
+
+Saida = Comer [|{|procurarLixo, sairRestaurante|}|] Retirar
+
+
+
+-- Processo final/principal do sistema, sincronizado com todos em cadeia
+RU = Saida [|{|jogarRestoComida, jogarCopo|}|] Lixeira(Lixeira1)
+
+
+
+
+-- REFINAMENTOS
+
+-- (1) Troca a escolha interna por uma externa
+
+NovosEstudantes_Det(ultimo) = let prox = proxEstudante(ultimo) within
+						  	chegouRU!prox -> ( ( entrouFilaTiquete!(prox) -> NovosEstudantes_Det(prox) ) 
+							  				  [] desistiuFilaTiquete!(prox) -> NovosEstudantes_Det(prox) )
+							  	
+assert NovosEstudantes(0) [FD= NovosEstudantes_Det(0)
+
+
+
+-- (2) Todos os estudantes que chegam no RU não desistem
+
+NovosEstudantes_Det_Fortes(ultimo) = let prox = proxEstudante(ultimo) within
+						  		     chegouRU!prox ->  entrouFilaTiquete!(prox) -> NovosEstudantes_Det_Fortes(prox) 
+							  				  
+							  	
+assert NovosEstudantes_Det(0)\{|desistiuFilaTiquete|} [T= NovosEstudantes_Det_Fortes(0)
+
+assert NovosEstudantes(0)\{|desistiuFilaTiquete|} [T= NovosEstudantes_Det_Fortes(0)
+
+
+
+-- (3) Retira o deadlock do jantar dos filósofos
+
+CadeiraCanhota(c) = sentarCadeira?estudante!c -> pegarTalher!c!talherDireito(c) -> pegarTalher!c!c
+					-> comer.estudante -> devolverTalher!c!talherDireito(c) -> devolverTalher!c!c 
+					-> beberSuco.estudante -> levantarCadeira.estudante.c 
+					-> (CadeiraCanhota(c) ||| procurarLixo!estudante -> STOP)
+
+MesaInteligente = ||| c:t_cadeiras @ if (c==1) then CadeiraCanhota(c) else Cadeira(c)
+
+JantarFilosofosInteligentes = MesaInteligente [|{|pegarTalher, devolverTalher|}|] Talheres
+
+-- assert JantarFilosofosInteligentes :[deadlock free [FD]]
+
+-- assert JantarFilosofos [FD= JantarFilosofosInteligentes
