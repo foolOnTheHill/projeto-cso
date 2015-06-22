@@ -1,6 +1,5 @@
 import ox.CSO._
 import ox.Format._
-import scala.collection.mutable.MutableList
 import java.util.Random
 
 object NomeEspec {
@@ -8,6 +7,7 @@ object NomeEspec {
 	val MAX_EXTUDANTES = 5
 	val MAX_MESA = 3
 	val MAX_RU = 5
+	var MAX_CAIXAS = 3
 
 	//-------------------------------- Funções
 
@@ -29,10 +29,11 @@ object NomeEspec {
 
 	//-------------------------------- Processos
 
-	/* Adiciona estudantes à fila e os avança, sincronizando com o processo 'caixa'.
+	/* Adiciona estudantes à fila e os avança, sincronizando com o processo 'Caixas'.
 	*  - primeiro: id do primeiro estudante a chegar. 
-	*  - comprarTiquete, sairCaixa: canais de sic. com o caixa. */
-	def filaTiquete(primeiro: Int, comprarTiquete: Seq[![Int]], sairCaixa: Seq[?[Int]]) = proc {
+	*  - comprarTiquete, sairCaixa: canais de sic. com o caixa. 
+	*  - chegouFilaCatraca: canal de sic. com a fila para as catracas. */
+	def FilaTiquete(primeiro: Int, comprarTiquete: Seq[![Int]], sairCaixa: Seq[?[Int]], chegouFilaCatraca: ![(Int, Int)]) = proc {
 		var prox: Int = primeiro
 		var filaTiq = new List() // Lista representando os estudantes na fila
 		var estudante: Int = 0 // Variavel para o estudante no começo da fila
@@ -67,24 +68,73 @@ object NomeEspec {
 				println("#" + estudante + " comprou o tiquete para a catraca #" + tiq)
 
 				filaTiq = filaTiq.tail // Atualiza a fila
+
+				/* TODO: Catraca... */
 			}
 
 		}
 	}
 
-	/* Avança os estudantes na fila sincronizando com o processo 'filaTiquete'.
+	/* Avança os estudantes na fila sincronizando com o processo 'FilaTiquete'.
 	*  - i: id do caixa.
 	*  - comprarTiquete, sairCaixa: canais de sic. com o caixa. */
-	def caixa(i: Int, comprarTiquete: ?[Int], sairCaixa: ![Int]) {
+	def Caixa(i: Int, comprarTiquete: Seq[?[Int]], sairCaixa: Seq[![Int]]) {
 		var estudante: Int = 0
 		while (true) {
-			estudante = comprarTiquete? ;
+			estudante = comprarTiquete(i)? ;
 			println("#" + estudante + "entrou no caixa #" + i)
 
 			if (estudante%2 == 1) 
-				sairCaixa!1
+				sairCaixa(i)!1
 			else 
-				sairCaixa!2
+				sairCaixa(i)!2
+		}
+	}
+
+	/* Processos 'Caixa' executando em paralelo. */
+	def Caixas(comprarTiquete: Seq[?[Int]], sairCaixa: Seq[![Int]]) = proc {
+		(|| (for (i <- 0 until MAX_CAIXAS) yield Caixa(i, comprarTiquete, sairCaixa)))()
+	}
+
+	/* Representa a fila correspondente a uma catraca.
+	*  - chegouFilaCatraca: canal que comunica o id do estudante que chegou na fila.
+	*  - consulta: canal para consultar à Organizadora se a catraca deve ser liberada ou não.
+	*  - libera: evento que indica que a catraca deve ser liberada.
+	*  - barra: evento que indica que deve ser barrada (caso do RU lotado). */
+	def FilaCatraca(i: Int, chegouFilaCatraca: Seq[?[Int]], consulta: ![Unit], libera: ?[Unit], barra: ?[Unit]) = proc {
+		var filaCat = new List()
+		var estudante: Int = 0
+		while (true) {
+			alt ( (true &&& chegouFilaCatraca) =?=> {est => filaCat = filaCat ++ [est]} )
+			
+			if (filaCat.length > 0) {
+				estudante = filaCat.head
+
+				consulta!()
+				alt ( (true &&& libera) =?=> { x => /* TODO */ }
+					| (true &&& barra) =?=> { x => println("#" + estudante + " está na fila esperando alguém sair") }
+				)
+
+				filaCat = filaCat.tail // Atualiza a fila
+			}
+		}
+	}
+
+	/* Processo que limita a entrada de estudantes no RU. 
+	*  - consulta, libera, barra: sinc. com 'FilaCatraca'.
+	*  - saiuRU: evento que indica que algum estudante saiu do RU, usado para atualizar o estado do processo. */
+	def Oganizadora(consulta: ?[Unit], libera: ![Unit], barra: ![Unit], saiuRU: ?[Unit]) = proc {
+		var total: Int = 0
+		while (true) {
+			alt ( (true &&& consulta) =?=> {x => if (total < MAX_RU) {
+													total = total + 1
+													libera!()
+												 } else {
+												 	barra!()
+												 }
+					}
+				| (true &&& saiuRU) =?=> {x => total = total - 1}
+			)
 		}
 	}
 
