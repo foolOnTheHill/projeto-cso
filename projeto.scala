@@ -7,22 +7,22 @@ object NomeEspec {
 	val MAX_EXTUDANTES = 5
 	val MAX_MESA = 3
 	val MAX_RU = 5
-	var MAX_CAIXAS = 3
+	val MAX_CAIXAS = 3
 
 	//-------------------------------- Funções
 
 	// Retorna o proximo estudante de acordo com a contagem modular.
-	def proxEstudante(ultimo: Int) {
+	def proxEstudante(ultimo: Int): Int = {
 		(ultimo+1) % MAX_EXTUDANTES
 	}
 	
 	// Retorna o talher à direita do Filósofo.
-	def talherDireito(t_esquerdo: Int) {
+	def talherDireito(t_esquerdo: Int): Int = {
 		(t_esquerdo+1) % MAX_MESA
 	}
 
 	// Retorna o talher à esquerda do Filósofo.
-	def talherEsquerdo(t_direito: Int) {
+	def talherEsquerdo(t_direito: Int): Int = {
 		if (t_direito == 0) MAX_MESA-1
 		else t_direito-1
 	}
@@ -35,7 +35,7 @@ object NomeEspec {
 	*  - chegouFilaCatraca: canal de sic. com a fila para as catracas. */
 	def FilaTiquete(primeiro: Int, comprarTiquete: Seq[![Int]], sairCaixa: Seq[?[Int]], chegouFilaCatraca: ![(Int, Int)]) = proc {
 		var prox: Int = primeiro
-		var filaTiq = new List() // Lista representando os estudantes na fila
+		var filaTiq = List[Int]() // Lista representando os estudantes na fila
 		var estudante: Int = 0 // Variavel para o estudante no começo da fila
 		var caixa: Int = 0 // Variável para o id do caixa no qual um estudante vai comprar o tíquete
 		var tiq: Int = 0 // Variavel com o id da catraca para a qual o estudante deve ir
@@ -50,7 +50,7 @@ object NomeEspec {
 			res = seed.nextInt(2)+1
 			res match {
 				case 1 =>
-					filaTiq = filaTiq ++ [prox]
+					filaTiq = filaTiq ::: List(prox)
 					println("#" + prox + " entrou na fila para comprar o Tiquete")
 				case 2 =>
 					println("#" + prox + " desistiu da fila")
@@ -64,7 +64,7 @@ object NomeEspec {
 				caixa = Console.readInt()
 
 				comprarTiquete(caixa)!estudante;
-				tiq = sairCaixa? ;
+				tiq = sairCaixa(caixa)?;
 				println("#" + estudante + " comprou o tiquete para a catraca #" + tiq)
 
 				filaTiq = filaTiq.tail // Atualiza a fila
@@ -78,7 +78,7 @@ object NomeEspec {
 	/* Avança os estudantes na fila sincronizando com o processo 'FilaTiquete'.
 	*  - i: id do caixa.
 	*  - comprarTiquete, sairCaixa: canais de sic. com o caixa. */
-	def Caixa(i: Int, comprarTiquete: Seq[?[Int]], sairCaixa: Seq[![Int]]) {
+	def Caixa(i: Int, comprarTiquete: Seq[?[Int]], sairCaixa: Seq[![Int]]) = proc {
 		var estudante: Int = 0
 		while (true) {
 			estudante = comprarTiquete(i)? ;
@@ -102,10 +102,10 @@ object NomeEspec {
 	*  - libera: evento que indica que a catraca deve ser liberada.
 	*  - barra: evento que indica que deve ser barrada (caso do RU lotado). */
 	def FilaCatraca(i: Int, chegouFilaCatraca: Seq[?[Int]], consulta: ![Unit], libera: ?[Unit], barra: ?[Unit]) = proc {
-		var filaCat = new List()
+		var filaCat = List[Int]()
 		var estudante: Int = 0
 		while (true) {
-			alt ( (true &&& chegouFilaCatraca) =?=> {est => filaCat = filaCat ++ [est]} )
+			alt ( (true &&& chegouFilaCatraca(i)) =?=> {est => filaCat = filaCat ::: List(est)} )
 			
 			if (filaCat.length > 0) {
 				estudante = filaCat.head
