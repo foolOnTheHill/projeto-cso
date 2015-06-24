@@ -2,10 +2,17 @@ import ox.CSO._
 import ox.Format._
 import java.util.Random
 
+/* TODO: 
+ * 1. Procurar cadeira;
+ * 2. Iniciar PHIL;
+ * 3. Jantar;
+ * 4. sairRu;
+ */
+
 object NomeEspec {
 	//--------------------------------  Constantes
 	val MAX_EXTUDANTES = 5
-	val MAX_MESA = 3
+	val MAX_CADEIRAS = 3
 	val MAX_RU = 5
 	val MAX_CAIXAS = 3
 
@@ -18,12 +25,12 @@ object NomeEspec {
 	
 	// Retorna o talher à direita do Filósofo.
 	def talherDireito(t_esquerdo: Int): Int = {
-		(t_esquerdo+1) % MAX_MESA
+		(t_esquerdo+1) % MAX_CADEIRAS
 	}
 
 	// Retorna o talher à esquerda do Filósofo.
 	def talherEsquerdo(t_direito: Int): Int = {
-		if (t_direito == 0) MAX_MESA-1
+		if (t_direito == 0) MAX_CADEIRAS-1
 		else t_direito-1
 	}
 
@@ -67,7 +74,7 @@ object NomeEspec {
 				tiq = sairCaixa(caixa)?;
 				println("#" + estudante + " comprou o tiquete para a catraca #" + tiq)
 
-        chegouFilaCatraca(tiq)!estudante
+				chegouFilaCatraca(tiq)!estudante
         
 				filaTiq = filaTiq.tail // Atualiza a fila
 			}
@@ -80,6 +87,7 @@ object NomeEspec {
 	*  - comprarTiquete, sairCaixa: canais de sic. com o caixa. */
 	def Caixa(i: Int, comprarTiquete: Seq[?[Int]], sairCaixa: Seq[![Int]]) = proc {
 		var estudante: Int = 0
+		
 		while (true) {
 			estudante = comprarTiquete(i)? ;
 			println("#" + estudante + "entrou no caixa #" + i)
@@ -101,18 +109,23 @@ object NomeEspec {
 	*  - consulta: canal para consultar à Organizadora se a catraca deve ser liberada ou não.
 	*  - libera: evento que indica que a catraca deve ser liberada.
 	*  - barra: evento que indica que deve ser barrada (caso do RU lotado). */
-	def FilaCatraca(i: Int, chegouFilaCatraca: Seq[?[Int]], consulta: ![Unit], libera: ?[Unit], barra: ?[Unit]) = proc {
+	def FilaCatraca(i: Int, chegouFilaCatraca: Seq[?[Int]], consulta: ![Unit], libera: ?[Unit], barra: ?[Unit], chegouFilaComida: ![Int]) = proc {
 		var filaCat = List[Int]()
 		var estudante: Int = 0
+    
 		while (true) {
-			alt ( (true &&& chegouFilaCatraca(i)) =?=> { est => filaCat = filaCat ::: List(est) } )
+			alt ( (true &&& chegouFilaCatraca(i)) =?=> { est => { filaCat = filaCat ::: List(est) 
+																  println("#" + est + " entrou na fila da catraca #" + i) } } )
 			
 			if (filaCat.length > 0) {
 				estudante = filaCat.head
 
 				consulta!()
-				alt ( (true &&& libera) =?=> { x => filaCat = filaCat.tail }
-					  | (true &&& barra) =?=> { x => { println("#" + estudante + " está na fila esperando alguém sair") } }
+				alt ( (true &&& libera) =?=> { x => { filaCat = filaCat.tail     // Atualiza a fila
+													  chegouFilaComida!estudante // Envia o estudante para a Fila da Comida
+													}
+											 }
+					| (true &&& barra) =?=> { x => { println("#" + estudante + " está na fila esperando alguém sair") } }
 				)
 			}
 		}
@@ -123,22 +136,46 @@ object NomeEspec {
 	*  - saiuRU: evento que indica que algum estudante saiu do RU, usado para atualizar o estado do processo. */
 	def Oganizadora(consulta: ?[Unit], libera: ![Unit], barra: ![Unit], saiuRU: ?[Unit]) = proc {
 		var total: Int = 0
+		
 		while (true) {
-			alt ( (true &&& consulta) =?=> {x => if (total < MAX_RU) {
+			alt ( (true &&& consulta) =?=> { x => if (total < MAX_RU) {
 													total = total + 1
 													libera!()
-												 } else {
-												 	barra!()
-												 }
-					}
+												  } else {
+													barra!()
+												  }
+											}
 				| (true &&& saiuRU) =?=> {x => total = total - 1}
 			)
 		}
 	}
+  
+	/* Representa a fila para pegar a comida.
+	*  - chegouFilaComida: canal que comunica o id do estudante que chegou na fila. */
+	def FilaComida(chegouFilaComida: ?[Int]) = proc {
+		var filaCom = List[Int]()
+		var estudante: Int = 0
 
+		while (true) {
+			alt ( (true &&& chegouFilaComida) =?=> { est => { filaCom = filaCom ::: List(est) 
+															  println("#" + est + " entrou na fila para pegar a comida") } } )
+
+			if (filaCom.length > 0) {
+				estudante = filaCom.head
+				println("#" + estudante + " pegou o prato")
+				println("#" + estudante + " pegou a comida")
+				println("#" + estudante + " pegou o suco")
+
+				// TODO: procurar cadeira
+
+				filaCom = filaCom.tail // Atualiza a fila
+			}  
+		}
+	}
+  
 	def main(args: Array[String]) {
 		// Declarar canais...
 		// Chamar o processo principal...
-   	exit
+   		exit
 	}
 } 
