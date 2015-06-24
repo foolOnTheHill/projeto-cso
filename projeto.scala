@@ -33,7 +33,7 @@ object NomeEspec {
 	*  - primeiro: id do primeiro estudante a chegar. 
 	*  - comprarTiquete, sairCaixa: canais de sic. com o caixa. 
 	*  - chegouFilaCatraca: canal de sic. com a fila para as catracas. */
-	def FilaTiquete(primeiro: Int, comprarTiquete: Seq[![Int]], sairCaixa: Seq[?[Int]], chegouFilaCatraca: ![(Int, Int)]) = proc {
+	def FilaTiquete(primeiro: Int, comprarTiquete: Seq[![Int]], sairCaixa: Seq[?[Int]], chegouFilaCatraca: Seq[![Int]]) = proc {
 		var prox: Int = primeiro
 		var filaTiq = List[Int]() // Lista representando os estudantes na fila
 		var estudante: Int = 0 // Variavel para o estudante no começo da fila
@@ -63,13 +63,13 @@ object NomeEspec {
 				print("#" + estudante + " digite o caixa em que quer comprar o tíquete: ")
 				caixa = Console.readInt()
 
-				comprarTiquete(caixa)!estudante;
+				comprarTiquete(caixa)!estudante
 				tiq = sairCaixa(caixa)?;
 				println("#" + estudante + " comprou o tiquete para a catraca #" + tiq)
 
+        chegouFilaCatraca(tiq)!estudante
+        
 				filaTiq = filaTiq.tail // Atualiza a fila
-
-				/* TODO: Catraca... */
 			}
 
 		}
@@ -85,9 +85,9 @@ object NomeEspec {
 			println("#" + estudante + "entrou no caixa #" + i)
 
 			if (estudante%2 == 1) 
-				sairCaixa(i)!1
+				sairCaixa(i)!0
 			else 
-				sairCaixa(i)!2
+				sairCaixa(i)!1
 		}
 	}
 
@@ -105,17 +105,15 @@ object NomeEspec {
 		var filaCat = List[Int]()
 		var estudante: Int = 0
 		while (true) {
-			alt ( (true &&& chegouFilaCatraca(i)) =?=> {est => filaCat = filaCat ::: List(est)} )
+			alt ( (true &&& chegouFilaCatraca(i)) =?=> { est => filaCat = filaCat ::: List(est) } )
 			
 			if (filaCat.length > 0) {
 				estudante = filaCat.head
 
 				consulta!()
-				alt ( (true &&& libera) =?=> { x => /* TODO */ }
-					| (true &&& barra) =?=> { x => println("#" + estudante + " está na fila esperando alguém sair") }
+				alt ( (true &&& libera) =?=> { x => filaCat = filaCat.tail }
+					  | (true &&& barra) =?=> { x => { println("#" + estudante + " está na fila esperando alguém sair") } }
 				)
-
-				filaCat = filaCat.tail // Atualiza a fila
 			}
 		}
 	}
@@ -141,6 +139,6 @@ object NomeEspec {
 	def main(args: Array[String]) {
 		// Declarar canais...
 		// Chamar o processo principal...
- 		exit
+   	exit
 	}
 } 
