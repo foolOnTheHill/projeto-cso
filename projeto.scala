@@ -158,7 +158,7 @@ object NomeEspec {
 
     while (true) {
       alt ( (true &&& chegouFilaComida) =?=> { est => { filaCom = filaCom ::: List(est) 
-                                               println("#" + est + " entrou na fila para pegar a comida") } } )
+                                                        println("#" + est + " entrou na fila para pegar a comida") } } )
         
       if (filaCom.length > 0) {
         estudante = filaCom.head
@@ -171,6 +171,27 @@ object NomeEspec {
         filaCom = filaCom.tail // Atualiza a fila
       }  
     }
+  }
+  
+  /* Representa uma cadeira do RU. Deve ser obtida por algum filósofo para que ele possa iniciar o jantar. 
+   * i: id da cadeira.
+   * sentar: evento que indica que alguém quer obter a cadeira.
+   * levantar: evento que indica que o filósofo saiu da cadeira.
+   * responder: evento utilizado pela cadeira para confirmar ou não o sucesso em obter a cadeira. */
+  def Cadeira(i: Int, sentar: Seq[?[Unit]], levantar: Seq[?[Unit]], responder: Seq[![Boolean]]) = proc {
+    var ocupada = false
+    
+    while (true) {
+      alt ( (ocupada &&& sentar(i)) =?=> {x => { responder(i)!false } }
+          | (!ocupada &&& sentar(i)) =?=> {x => { ocupada = true
+                                                  responder(i)!true } }
+          | (ocupada &&& levantar(i)) =?=> {x => { ocupada = false } } )
+    }
+  }
+  
+  /* Processos 'Cadeira' executando em paralelo. */
+  def Cadeiras(sentar: Seq[?[Unit]], levantar: Seq[?[Unit]], responder: Seq[![Boolean]]) = proc {
+    (|| (for (i <- 0 until MAX_CADEIRAS) yield Cadeira(i, sentar, levantar, responder) ) )();
   }
   
   def main(args: Array[String]) {
