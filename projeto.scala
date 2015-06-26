@@ -65,7 +65,7 @@ object NomeEspec {
 
         print("#" + estudante + " digite o caixa em que quer comprar o tíquete: ")
         caixa = Console.readInt()
-
+        
         comprarTiquete(caixa)!estudante
         tiq = sairCaixa(caixa)?;
         println("#" + estudante + " comprou o tiquete para a catraca #" + tiq)
@@ -340,7 +340,7 @@ object NomeEspec {
     
     val chegouFilaComida = OneOne[Int]
     
-    val procurarCadeira = OneOne[Unit](MAX_CADEIRAS)
+    val procurarCadeira = OneOne[Unit](MAX_ESTUDANTES)
     val sentar = OneOne[Unit](MAX_CADEIRAS)
     val levantar = OneOne[Unit](MAX_CADEIRAS)
     
