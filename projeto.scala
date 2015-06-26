@@ -272,7 +272,7 @@ object NomeEspec {
   }
   
   /* Processos 'Estudante' executando em paralelo. */
-  def Estudantes(procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], saiuRU: ![Int]) = proc {
+  def Estudantes(procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], saiuRU: ![Unit]) = proc {
     (|| ( for (i <- 0 until MAX_ESTUDANTES) yield Estudante(i, procurarCadeira, sentar, levantar, responder, pickup, putdown, saiuRU) ))() 
   }
   
