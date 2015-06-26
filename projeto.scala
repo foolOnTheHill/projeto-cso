@@ -11,7 +11,7 @@ import java.util.Random
 
 object NomeEspec {
   //--------------------------------  Constantes
-  val MAX_ESTUDANTES = 5
+  val MAX_ESTUDANTES = 10
   val MAX_CADEIRAS = 3
   val MAX_RU = 5
   val MAX_CAIXAS = 3
@@ -63,8 +63,12 @@ object NomeEspec {
       if (filaTiq.length > 0) {
         estudante = filaTiq.head
 
-        print("#" + estudante + " digite o caixa em que quer comprar o tíquete (0-" + (MAX_CAIXAS-1) + "): ")
-        caixa = Console.readInt()
+        // Com entrada do console
+        /*print("#" + estudante + " digite o caixa em que quer comprar o tíquete (0-" + (MAX_CAIXAS-1) + "): ")
+        caixa = Console.readInt()*/
+        
+        // Aleatório
+        caixa = seed.nextInt(MAX_CAIXAS)
         
         comprarTiquete(caixa)!estudante
         tiq = sairCaixa(caixa)?;
@@ -330,27 +334,27 @@ object NomeEspec {
   def RU() = proc {
 
     // Declarar canais...    
-    val comprarTiquete = OneOne[Int](MAX_CAIXAS)
-    val sairCaixa = OneOne[Int](MAX_CAIXAS)
-    val chegouFilaCatraca = OneOne[Int](MAX_CAIXAS)
+    val comprarTiquete = ManyMany[Int](MAX_CAIXAS)
+    val sairCaixa = ManyMany[Int](MAX_CAIXAS)
+    val chegouFilaCatraca = ManyMany[Int](MAX_CAIXAS)
     
-    val consulta = OneOne[Unit]
-    val libera = OneOne[Unit]
-    val barra = OneOne[Unit]
-    val saiuRU = OneOne[Unit]
+    val consulta = ManyMany[Unit]
+    val libera = ManyMany[Unit]
+    val barra = ManyMany[Unit]
+    val saiuRU = ManyMany[Unit]
     
-    val chegouFilaComida = OneOne[Int]
+    val chegouFilaComida = ManyMany[Int]
     
-    val procurarCadeira = OneOne[Unit](MAX_ESTUDANTES)
-    val sentar = OneOne[Unit](MAX_CADEIRAS)
-    val levantar = OneOne[Unit](MAX_CADEIRAS)
+    val procurarCadeira = ManyMany[Unit](MAX_ESTUDANTES)
+    val sentar = ManyMany[Unit](MAX_CADEIRAS)
+    val levantar = ManyMany[Unit](MAX_CADEIRAS)
     
-    val responder = OneOne[Boolean](MAX_CADEIRAS)
+    val responder = ManyMany[Boolean](MAX_CADEIRAS)
     
-    val pickup = OneOne[Unit](MAX_CADEIRAS)
-    val putdown = OneOne[Unit](MAX_CADEIRAS)
+    val pickup = ManyMany[Unit](MAX_CADEIRAS)
+    val putdown = ManyMany[Unit](MAX_CADEIRAS)
     
-    val procurarLixeira = OneOne[Int]
+    val procurarLixeira = ManyMany[Int]
     
     (FilaTiquete(0, comprarTiquete, sairCaixa, chegouFilaCatraca)() 
         ||
