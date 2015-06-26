@@ -15,6 +15,7 @@ object NomeEspec {
   val MAX_CADEIRAS = 3
   val MAX_RU = 5
   val MAX_CAIXAS = 3
+  val MAX_CATRACAS = 2
 
   //-------------------------------- Funções
 
@@ -130,6 +131,11 @@ object NomeEspec {
       }
     }
   }
+  
+  /* Processos 'FilaCatraca' executando em paralelo. */
+  def FilasCatraca(chegouFilaCatraca: Seq[?[Int]], consulta: ![Unit], libera: ?[Unit], barra: ?[Unit], chegouFilaComida: ![Int]) = proc {
+    (|| (for (i <- 0 until MAX_CATRACAS) yield FilaCatraca(i, chegouFilaCatraca, consulta, libera, barra, chegouFilaComida)))()
+  }
 
   /* Processo que limita a entrada de estudantes no RU. 
   *  - consulta, libera, barra: sinc. com 'FilaCatraca'.
@@ -230,9 +236,48 @@ object NomeEspec {
     (|| (for (i <- 0 until MAX_CADEIRAS) yield Cadeira(i, sentar, levantar, responder) ) )();
   }
   
+  def RU() = proc {
+
+    // Declarar canais...    
+    val comprarTiquete = OneOne[Int](MAX_CAIXAS)
+    val sairCaixa = OneOne[Int](MAX_CAIXAS)
+    val chegouFilaCatraca = OneOne[Int](MAX_CAIXAS)
+    
+    val consulta = OneOne[Unit]
+    val libera = OneOne[Unit]
+    val barra = OneOne[Unit]
+    val saiuRU = OneOne[Unit]
+    
+    val chegouFilaComida = OneOne[Int]
+    
+    val procurarCadeira = OneOne[Unit](MAX_CADEIRAS)
+    val sentar = OneOne[Unit](MAX_CADEIRAS)
+    val levantar = OneOne[Unit](MAX_CADEIRAS)
+    val responder = OneOne[Boolean](MAX_CADEIRAS)
+    
+    (FilaTiquete(1, comprarTiquete, sairCaixa, chegouFilaCatraca)() 
+        ||
+      Caixas(comprarTiquete, sairCaixa)()
+        ||
+      FilasCatraca(chegouFilaCatraca, consulta, libera, barra, chegouFilaComida)()
+        ||
+      Oganizadora(consulta, libera, barra, saiuRU)()
+        ||
+      FilaComida(chegouFilaComida, procurarCadeira)()
+        ||
+      Estudantes(procurarCadeira, sentar, levantar, responder)()
+        ||
+      Cadeiras(sentar, levantar, responder)()
+        
+    )()
+    
+    //(PHILS(pickup, putdown) || FORKS(pickup, putdown))()
+  }
+  
   def main(args: Array[String]) {
-    // Declarar canais...
+
     // Chamar o processo principal...
+    //(RU())()
     exit
   }
 } 
