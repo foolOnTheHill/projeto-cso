@@ -180,6 +180,7 @@ object NomeEspec {
   def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]]) = proc {
     var pronto: Boolean = false
     var sentado: Boolean = false
+    var cadeira: Int = 0
     
     while (true) {
       if (pronto && !sentado) {
@@ -188,7 +189,10 @@ object NomeEspec {
           sentar(c)!()
           val r = responder(c)?;
           
-          if (r) sentado = true
+          if (r) {
+            sentado = true
+            cadeira = c
+          }
         }
       } else if (sentado){
         // TODO: Jantar
