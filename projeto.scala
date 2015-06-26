@@ -11,7 +11,7 @@ import java.util.Random
 
 object NomeEspec {
   //--------------------------------  Constantes
-  val MAX_EXTUDANTES = 5
+  val MAX_ESTUDANTES = 5
   val MAX_CADEIRAS = 3
   val MAX_RU = 5
   val MAX_CAIXAS = 3
@@ -20,7 +20,7 @@ object NomeEspec {
 
   // Retorna o proximo estudante de acordo com a contagem modular.
   def proxEstudante(ultimo: Int): Int = {
-    (ultimo+1) % MAX_EXTUDANTES
+    (ultimo+1) % MAX_ESTUDANTES
   }
   
   // Retorna o talher à direita do Filósofo.
@@ -152,7 +152,7 @@ object NomeEspec {
   
   /* Representa a fila para pegar a comida.
   *  - chegouFilaComida: canal que comunica o id do estudante que chegou na fila. */
-  def FilaComida(chegouFilaComida: ?[Int]) = proc {
+  def FilaComida(chegouFilaComida: ?[Int], procurarCadeira: Seq[![Unit]]) = proc {
     var filaCom = List[Int]()
     var estudante: Int = 0
 
@@ -166,11 +166,43 @@ object NomeEspec {
         println("#" + estudante + " pegou a comida")
         println("#" + estudante + " pegou o suco")
 
-        // TODO: procurar cadeira
-
+        procurarCadeira(estudante)!()
+        
         filaCom = filaCom.tail // Atualiza a fila
       }  
     }
+  }
+  
+  /* Representa o Estudante e é o processo responsável por procurar uma cadeira e realizar o jantar.
+   * i: id do estudante.
+   * procurarCadeira: evento que indica que o estudante está pronto para procurar por uma cadeira.
+   * sentar, levantar, responder: eventos sincronizados com 'Cadeira', verificam se uma cadeira está ocupada e tenta obter acesso. */
+  def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]]) = proc {
+    var pronto: Boolean = false
+    var sentado: Boolean = false
+    
+    while (true) {
+      if (pronto && !sentado) {
+        var c = 0
+        while (c < MAX_CADEIRAS && !sentado) {
+          sentar(c)!()
+          val r = responder(c)?;
+          
+          if (r) sentado = true
+        }
+      } else if (sentado){
+        // TODO: Jantar
+      } else {
+        val r = procurarCadeira(i)?; // Espera a indicação para começar a procurar cadeira
+        pronto = true
+        println("#" + i + " está procurando uma cadeira")
+      }
+    }
+  }
+  
+  /* Processos 'Estudante' executando em paralelo. */
+  def Estudantes(procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]]) = proc {
+    (|| ( for (i <- 0 until MAX_ESTUDANTES) yield Estudante(i, procurarCadeira, sentar, levantar, responder) ))() 
   }
   
   /* Representa uma cadeira do RU. Deve ser obtida por algum filósofo para que ele possa iniciar o jantar. 
