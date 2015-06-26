@@ -1,6 +1,7 @@
 import ox.CSO._
 import ox.Format._
 import java.util.Random
+import java.util.Scanner
 
 /* TODO: 
  * 1. Procurar cadeira;
@@ -11,17 +12,17 @@ import java.util.Random
 
 object NomeEspec {
   //--------------------------------  Constantes
-  val MAX_ESTUDANTES = 10
+  val MAX_ESTUDANTES = 3
   val MAX_CADEIRAS = 3
   val MAX_RU = 5
   val MAX_CAIXAS = 3
   val MAX_CATRACAS = 2
 
   //-------------------------------- Funções
-
+  
   // Retorna o proximo estudante de acordo com a contagem modular.
   def proxEstudante(ultimo: Int): Int = {
-    (ultimo+1) % MAX_ESTUDANTES
+    (ultimo+1)// % MAX_ESTUDANTES
   }
   
   // Retorna o talher à direita do Filósofo.
@@ -48,23 +49,25 @@ object NomeEspec {
     var res: Int = 0
     
     while (true) {
-      println("#" + prox + " chegou no RU.")
-      
-      res = seed.nextInt(2)+1
-      res match {
-        case 1 =>
-          filaTiq = filaTiq ::: List(prox)
-          println("#" + prox + " entrou na fila para comprar o Tiquete")
-        case 2 =>
-          println("#" + prox + " desistiu da fila")
+      if (prox < MAX_ESTUDANTES) {
+        println("#" + prox + " chegou no RU.")
+        
+        res = seed.nextInt(2)+1
+        res match {
+          case 1 =>
+            filaTiq = filaTiq ::: List(prox)
+            println("#" + prox + " entrou na fila para comprar o Tiquete")
+          case 2 =>
+            println("#" + prox + " desistiu da fila")
+        }
+        prox = proxEstudante(prox)
       }
-      prox = proxEstudante(prox)
-
+      
       if (filaTiq.length > 0) {
         estudante = filaTiq.head
 
         // Com entrada do console
-        /*print("#" + estudante + " digite o caixa em que quer comprar o tíquete (0-" + (MAX_CAIXAS-1) + "): ")
+        /*println("#" + estudante + " digite o caixa em que quer comprar o tíquete (0-" + (MAX_CAIXAS-1) + "): ")
         caixa = Console.readInt()*/
         
         // Aleatório
@@ -195,6 +198,8 @@ object NomeEspec {
     var left: Boolean = false
     var right: Boolean = false
     
+    val in: Scanner = new Scanner(System.in)
+    
     while (true) {
       if (pronto && !sentado) {
         var c = 0
@@ -218,8 +223,8 @@ object NomeEspec {
         var act: Int = 0
         
         if (!left) {
-          print("#" + i + " pegar o garfo da esquerda (" + talherEsquerdo(cadeira) + ")? Digite 0 ou 1: ")
-          act = Console.readInt()
+          println("#" + i + " pegar o garfo da esquerda (" + talherEsquerdo(cadeira) + ")? Digite 0 ou 1: ")
+          act = in.nextInt()
           
           if (act == 1) {
             pickup(talherEsquerdo(cadeira))?;
@@ -227,8 +232,8 @@ object NomeEspec {
             left = true
           }
         } else {
-          print("#" + i + " devolver o garfo da esquerda (" + talherEsquerdo(cadeira) + ")? Digite 0 ou 1: ")
-          act = Console.readInt()
+          println("#" + i + " devolver o garfo da esquerda (" + talherEsquerdo(cadeira) + ")? Digite 0 ou 1: ")
+          act = in.nextInt()
           
           if (act == 1) {
             putdown(talherEsquerdo(cadeira))!();
@@ -238,8 +243,8 @@ object NomeEspec {
         }
 
         if (!right) {
-          print("#" + i + " pegar o garfo da direita (" + talherDireito(cadeira) + ")? Digite 0 ou 1: ")
-          act = Console.readInt()
+          println("#" + i + " pegar o garfo da direita (" + talherDireito(cadeira) + ")? Digite 0 ou 1: ")
+          act = in.nextInt()
           
           if (act == 1) {
             pickup(talherDireito(cadeira))?;
@@ -247,27 +252,28 @@ object NomeEspec {
             right = true
           }
         } else {
-          print("#" + i + " devolver o garfo da direita (" + talherDireito(cadeira) + ")? Digite 0 ou 1: ")
-          act = Console.readInt()
+          println("#" + i + " devolver o garfo da direita (" + talherDireito(cadeira) + ")? Digite 0 ou 1: ")
+          act = in.nextInt()
           
           if (act == 1) {
             putdown(talherDireito(cadeira))!();
             println("#" + i + " devolveu o garfo da direita")
-            left = false
+            right = false
           }
         }
         
         if (left && right) { // Possui acesso aos dois garfos
           println("#" + i + " está comendo")
         } else if (!left && !right){ // Já devolveu os dois garfos
-          print("#" + i + " vai sair do RU? Digite 0 ou 1:")
-          act = Console.readInt()
+          println("#" + i + " vai sair do RU? Digite 0 ou 1:")
+          act = in.nextInt()
           
           if (act == 1) {
             procurarLixeira!i
             saiuRU!()
             println("#" + i + " saiu do RU")
-            exit // Termina o processo
+            
+            System.exit(0) // Termina o processo
           }
         }
         
