@@ -178,8 +178,10 @@ object NomeEspec {
    * i: id do estudante.
    * procurarCadeira: evento que indica que o estudante está pronto para procurar por uma cadeira.
    * sentar, levantar, responder: eventos sincronizados com 'Cadeira', verificam se uma cadeira está ocupada e tenta obter acesso.
-   * pickup, putdown: eventos de sincronização com os garfos, FORKS. */
-  def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], saiuRU: ![Unit]) = proc {
+   * pickup, putdown: eventos de sincronização com os garfos, FORKS.
+   * procurarLixeira: evento de sincronização para obter acesso à lixeira.
+   * saiuRU: evento que indica que o estudante saiu do restaurante. */
+  def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], procurarLixeira: ![Int], saiuRU: ![Unit]) = proc {
     var pronto: Boolean = false // Pronto para procurar uma cadeira
     var sentado: Boolean = false
     
@@ -257,6 +259,7 @@ object NomeEspec {
           act = Console.readInt()
           
           if (act == 1) {
+            procurarLixeira!i
             saiuRU!()
             println("#" + i + " saiu do RU")
             exit // Termina o processo
@@ -272,8 +275,8 @@ object NomeEspec {
   }
   
   /* Processos 'Estudante' executando em paralelo. */
-  def Estudantes(procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], saiuRU: ![Unit]) = proc {
-    (|| ( for (i <- 0 until MAX_ESTUDANTES) yield Estudante(i, procurarCadeira, sentar, levantar, responder, pickup, putdown, saiuRU) ))() 
+  def Estudantes(procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], procurarLixeira: ![Int], saiuRU: ![Unit]) = proc {
+    (|| ( for (i <- 0 until MAX_ESTUDANTES) yield Estudante(i, procurarCadeira, sentar, levantar, responder, pickup, putdown, procurarLixeira, saiuRU) ))() 
   }
   
   /* Processo que representa um garfo.
@@ -312,6 +315,17 @@ object NomeEspec {
     (|| (for (i <- 0 until MAX_CADEIRAS) yield Cadeira(i, sentar, levantar, responder) ) )();
   }
   
+  /* Processo que representa a 'Lixeira' */
+  def Lixeira(procurarLixeira: ?[Int]) = proc {
+    var estudante: Int = 0
+
+    while (true) {
+      estudante = procurarLixeira?;
+      println("#" + estudante + " jogou fora o resto de comida e o copo.")
+      println("#" + estudante + " jogou devolveu a bandeja e o prato.")
+    }
+  }
+  
   def RU() = proc {
 
     // Declarar canais...    
@@ -335,7 +349,9 @@ object NomeEspec {
     val pickup = OneOne[Unit](MAX_CADEIRAS)
     val putdown = OneOne[Unit](MAX_CADEIRAS)
     
-    (FilaTiquete(1, comprarTiquete, sairCaixa, chegouFilaCatraca)() 
+    val procurarLixeira = OneOne[Int]
+    
+    (FilaTiquete(0, comprarTiquete, sairCaixa, chegouFilaCatraca)() 
         ||
       Caixas(comprarTiquete, sairCaixa)()
         ||
@@ -345,19 +361,19 @@ object NomeEspec {
         ||
       FilaComida(chegouFilaComida, procurarCadeira)()
         ||
-      Estudantes(procurarCadeira, sentar, levantar, responder, pickup, putdown, saiuRU)()
+      Estudantes(procurarCadeira, sentar, levantar, responder, pickup, putdown, procurarLixeira, saiuRU)()
         ||
       Cadeiras(sentar, levantar, responder)()
         || 
       FORKS(pickup, putdown)()
+        ||
+      Lixeira(procurarLixeira)()
     )()
     
   }
   
   def main(args: Array[String]) {
-
-    // Chamar o processo principal...
-    //(RU())()
+    (RU())()
     exit
   }
 } 
