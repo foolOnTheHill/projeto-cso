@@ -24,16 +24,11 @@ object NomeEspec {
   }
   
   // Retorna o talher à direita do Filósofo.
-  def talherDireito(t_esquerdo: Int): Int = {
-    (t_esquerdo+1) % MAX_CADEIRAS
-  }
+  def talherDireito(i: Int): Int = (i+1) % MAX_ESTUDANTES
 
   // Retorna o talher à esquerda do Filósofo.
-  def talherEsquerdo(t_direito: Int): Int = {
-    if (t_direito == 0) MAX_CADEIRAS-1
-    else t_direito-1
-  }
-
+  def talherEsquerdo(i: Int): Int = if (i == 0) MAX_CADEIRAS-1 else i-1
+  
   //-------------------------------- Processos
 
   /* Adiciona estudantes à fila e os avança, sincronizando com o processo 'Caixas'.
@@ -176,26 +171,92 @@ object NomeEspec {
   /* Representa o Estudante e é o processo responsável por procurar uma cadeira e realizar o jantar.
    * i: id do estudante.
    * procurarCadeira: evento que indica que o estudante está pronto para procurar por uma cadeira.
-   * sentar, levantar, responder: eventos sincronizados com 'Cadeira', verificam se uma cadeira está ocupada e tenta obter acesso. */
-  def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]]) = proc {
-    var pronto: Boolean = false
+   * sentar, levantar, responder: eventos sincronizados com 'Cadeira', verificam se uma cadeira está ocupada e tenta obter acesso.
+   * pickup, putdown: eventos de sincronização com os garfos, FORKS. */
+  def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], saiuRU: ![Int]) = proc {
+    var pronto: Boolean = false // Pronto para procurar uma cadeira
     var sentado: Boolean = false
-    var cadeira: Int = 0
+    
+    var cadeira: Int = 0 // Id da cadeira em que está sentado
+    
+    // Flags para os garfos
+    var left: Boolean = false
+    var right: Boolean = false
     
     while (true) {
       if (pronto && !sentado) {
         var c = 0
+        
+        // Procura alguma cadeira livre
         while (c < MAX_CADEIRAS && !sentado) {
+          println("#" + i + " tentando sentar na Cadeira #" + c)
           sentar(c)!()
           val r = responder(c)?;
           
           if (r) {
+            println("#" + i + " conseguiu sentar na Cadeira #" + c)
             sentado = true
             cadeira = c
+          } else {
+            println("#" + i + " não conseguiu sentar na Cadeira #" + c)
           }
         }
       } else if (sentado){
-        // TODO: Jantar
+        var act: Int = 0
+        
+        if (!left) {
+          print("#" + i + " pegar o garfo da esquerda (" + talherEsquerdo(cadeira) + ")? Digite 0 ou 1: ")
+          act = Console.readInt()
+          
+          if (act == 1) {
+            pickup(talherEsquerdo(cadeira))?;
+            println("#" + i + " pegou o garfo da esquerda")
+            left = true
+          }
+        } else {
+          print("#" + i + " devolver o garfo da esquerda (" + talherEsquerdo(cadeira) + ")? Digite 0 ou 1: ")
+          act = Console.readInt()
+          
+          if (act == 1) {
+            putdown(talherEsquerdo(cadeira))!();
+            println("#" + i + " devolveu o garfo da esquerda")
+            left = false
+          }
+        }
+
+        if (!right) {
+          print("#" + i + " pegar o garfo da direita (" + talherDireito(cadeira) + ")? Digite 0 ou 1: ")
+          act = Console.readInt()
+          
+          if (act == 1) {
+            pickup(talherDireito(cadeira))?;
+            println("#" + i + " pegou o garfo da direita")
+            right = true
+          }
+        } else {
+          print("#" + i + " devolver o garfo da direita (" + talherDireito(cadeira) + ")? Digite 0 ou 1: ")
+          act = Console.readInt()
+          
+          if (act == 1) {
+            putdown(talherDireito(cadeira))!();
+            println("#" + i + " devolveu o garfo da direita")
+            left = false
+          }
+        }
+        
+        if (left && right) { // Possui acesso aos dois garfos
+          println("#" + i + " está comendo")
+        } else if (!left && !right){ // Já devolveu os dois garfos
+          print("#" + i + " vai sair do RU? Digite 0 ou 1:")
+          act = Console.readInt()
+          
+          if (act == 1) {
+            saiuRU!i
+            println("#" + i + " saiu do RU")
+            exit // Termina o processo
+          }
+        }
+        
       } else {
         val r = procurarCadeira(i)?; // Espera a indicação para começar a procurar cadeira
         pronto = true
@@ -205,8 +266,23 @@ object NomeEspec {
   }
   
   /* Processos 'Estudante' executando em paralelo. */
-  def Estudantes(procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]]) = proc {
-    (|| ( for (i <- 0 until MAX_ESTUDANTES) yield Estudante(i, procurarCadeira, sentar, levantar, responder) ))() 
+  def Estudantes(procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], saiuRU: ![Int]) = proc {
+    (|| ( for (i <- 0 until MAX_ESTUDANTES) yield Estudante(i, procurarCadeira, sentar, levantar, responder, pickup, putdown, saiuRU) ))() 
+  }
+  
+  /* Processo que representa um garfo.
+   * pickup: tentar pegar o garfo.
+   * putdown: devolver o garfo. */
+  def FORK(i: Int, pickup: Seq[![Unit]], putdown: Seq[?[Unit]]) = proc {
+    while(true) {
+      alt( (true &&& pickup(i)) =!=> { () } ==> { putdown(i)? }
+         | (true &&& pickup(talherEsquerdo(i))) =!=> { () } ==> { putdown(talherEsquerdo(i))? } )
+    }
+  }
+  
+  /* Processos 'FORK' executando em paralelo. */
+  def FORKS(pickup: Seq[![Unit]], putdown: Seq[?[Unit]]) = proc {
+    (|| (for (i <- 0 until MAX_CADEIRAS) yield FORK(i, pickup, putdown)))()
   }
   
   /* Representa uma cadeira do RU. Deve ser obtida por algum filósofo para que ele possa iniciar o jantar. 
