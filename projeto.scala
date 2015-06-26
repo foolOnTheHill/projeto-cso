@@ -63,7 +63,7 @@ object NomeEspec {
       if (filaTiq.length > 0) {
         estudante = filaTiq.head
 
-        print("#" + estudante + " digite o caixa em que quer comprar o tíquete: ")
+        print("#" + estudante + " digite o caixa em que quer comprar o tíquete (0-" + (MAX_CAIXAS-1) + "): ")
         caixa = Console.readInt()
         
         comprarTiquete(caixa)!estudante
@@ -86,7 +86,7 @@ object NomeEspec {
     
     while (true) {
       estudante = comprarTiquete(i)? ;
-      println("#" + estudante + "entrou no caixa #" + i)
+      println("#" + estudante + " entrou no caixa #" + i)
 
       if (estudante%2 == 1) 
         sairCaixa(i)!0
@@ -207,6 +207,7 @@ object NomeEspec {
             cadeira = c
           } else {
             println("#" + i + " não conseguiu sentar na Cadeira #" + c)
+            c = c + 1
           }
         }
       } else if (sentado){
