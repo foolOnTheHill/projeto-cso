@@ -179,7 +179,7 @@ object NomeEspec {
    * procurarCadeira: evento que indica que o estudante está pronto para procurar por uma cadeira.
    * sentar, levantar, responder: eventos sincronizados com 'Cadeira', verificam se uma cadeira está ocupada e tenta obter acesso.
    * pickup, putdown: eventos de sincronização com os garfos, FORKS. */
-  def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], saiuRU: ![Int]) = proc {
+  def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], saiuRU: ![Unit]) = proc {
     var pronto: Boolean = false // Pronto para procurar uma cadeira
     var sentado: Boolean = false
     
@@ -257,7 +257,7 @@ object NomeEspec {
           act = Console.readInt()
           
           if (act == 1) {
-            saiuRU!i
+            saiuRU!()
             println("#" + i + " saiu do RU")
             exit // Termina o processo
           }
