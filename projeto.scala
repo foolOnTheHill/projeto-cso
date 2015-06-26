@@ -329,7 +329,11 @@ object NomeEspec {
     val procurarCadeira = OneOne[Unit](MAX_CADEIRAS)
     val sentar = OneOne[Unit](MAX_CADEIRAS)
     val levantar = OneOne[Unit](MAX_CADEIRAS)
+    
     val responder = OneOne[Boolean](MAX_CADEIRAS)
+    
+    val pickup = OneOne[Unit](MAX_CADEIRAS)
+    val putdown = OneOne[Unit](MAX_CADEIRAS)
     
     (FilaTiquete(1, comprarTiquete, sairCaixa, chegouFilaCatraca)() 
         ||
@@ -341,13 +345,13 @@ object NomeEspec {
         ||
       FilaComida(chegouFilaComida, procurarCadeira)()
         ||
-      Estudantes(procurarCadeira, sentar, levantar, responder)()
+      Estudantes(procurarCadeira, sentar, levantar, responder, pickup, putdown, saiuRU)()
         ||
       Cadeiras(sentar, levantar, responder)()
-        
+        || 
+      FORKS(pickup, putdown)()
     )()
     
-    //(PHILS(pickup, putdown) || FORKS(pickup, putdown))()
   }
   
   def main(args: Array[String]) {
