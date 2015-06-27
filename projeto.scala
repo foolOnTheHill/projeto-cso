@@ -1,4 +1,4 @@
-import ox.CSO._
+﻿import ox.CSO._
 import ox.Format._
 import java.util.Random
 import java.util.Scanner
@@ -85,11 +85,14 @@ object NomeEspec {
     while (true) {
       estudante = comprarTiquete(i)?;
       println("#" + estudante + " entrou no caixa #" + i)
-
+      
       cat = (estudante + 1) % 2
       
-      chegouFilaCatraca(cat)!estudante
       println("#" + estudante + " comprou o tiquete para a catraca #" + cat)
+      println("#" + estudante + " saiu do caixa #" + i)
+
+      chegouFilaCatraca(cat)!estudante
+      
     }
   }
 
@@ -115,7 +118,8 @@ object NomeEspec {
         estudante = filaCat.head
 
         consulta!()
-        alt ( (true &&& libera) =?=> { x => { filaCat = filaCat.tail     // Atualiza a fila
+        alt ( (true &&& libera) =?=> { x => { println("#" + estudante + " entrou no RU pela catraca #" + i)
+                                              filaCat = filaCat.tail     // Atualiza a fila
                                               chegouFilaComida!estudante // Envia o estudante para a Fila da Comida
                                             }
                                      }
@@ -203,7 +207,7 @@ object NomeEspec {
           val r = responder(c)?;
           
           if (r) {
-            //println("#" + i + " conseguiu sentar na Cadeira #" + c)
+            println("#" + i + " conseguiu sentar na cadeira #" + c)
             sentado = true
             cadeira = c
           } else {
@@ -326,7 +330,7 @@ object NomeEspec {
     while (true) {
       estudante = procurarLixeira?;
       println("#" + estudante + " jogou fora o resto de comida e o copo.")
-      println("#" + estudante + " jogou devolveu a bandeja e o prato.")
+      println("#" + estudante + " devolveu a bandeja e o prato.")
       
       podeSair(estudante)!()
     }
