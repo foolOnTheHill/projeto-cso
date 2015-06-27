@@ -17,7 +17,7 @@ object NomeEspec {
   def proxEstudante(ultimo: Int): Int = (ultimo+1)
   
   // Retorna o talher à direita do Filósofo.
-  def talherDireito(i: Int): Int = (i+1) % MAX_ESTUDANTES
+  def talherDireito(i: Int): Int = (i+1) % MAX_CADEIRAS
 
   // Retorna o talher à esquerda do Filósofo.
   def talherEsquerdo(i: Int): Int = if (i == 0) MAX_CADEIRAS-1 else i-1
@@ -198,16 +198,16 @@ object NomeEspec {
         
         // Procura alguma cadeira livre
         while (c < MAX_CADEIRAS && !sentado) {
-          println("#" + i + " tentando sentar na Cadeira #" + c)
+          //println("#" + i + " tentando sentar na Cadeira #" + c)
           sentar(c)!()
           val r = responder(c)?;
           
           if (r) {
-            println("#" + i + " conseguiu sentar na Cadeira #" + c)
+            //println("#" + i + " conseguiu sentar na Cadeira #" + c)
             sentado = true
             cadeira = c
           } else {
-            println("#" + i + " não conseguiu sentar na Cadeira #" + c)
+            //println("#" + i + " não conseguiu sentar na Cadeira #" + c)
             c = c + 1
           }
         }
