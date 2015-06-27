@@ -3,16 +3,9 @@ import ox.Format._
 import java.util.Random
 import java.util.Scanner
 
-/* TODO: 
- * 1. Procurar cadeira;
- * 2. Iniciar PHIL;
- * 3. Jantar;
- * 4. sairRu;
- */
-
 object NomeEspec {
   //--------------------------------  Constantes
-  val MAX_ESTUDANTES = 3
+  val MAX_ESTUDANTES = 20
   val MAX_CADEIRAS = 3
   val MAX_RU = 5
   val MAX_CAIXAS = 3
@@ -20,10 +13,8 @@ object NomeEspec {
 
   //-------------------------------- Funções
   
-  // Retorna o proximo estudante de acordo com a contagem modular.
-  def proxEstudante(ultimo: Int): Int = {
-    (ultimo+1)// % MAX_ESTUDANTES
-  }
+  // Retorna o proximo estudante
+  def proxEstudante(ultimo: Int): Int = (ultimo+1)
   
   // Retorna o talher à direita do Filósofo.
   def talherDireito(i: Int): Int = (i+1) % MAX_ESTUDANTES
@@ -33,72 +24,72 @@ object NomeEspec {
   
   //-------------------------------- Processos
 
-  /* Adiciona estudantes à fila e os avança, sincronizando com o processo 'Caixas'.
-  *  - primeiro: id do primeiro estudante a chegar. 
-  *  - comprarTiquete, sairCaixa: canais de sic. com o caixa. 
-  *  - chegouFilaCatraca: canal de sic. com a fila para as catracas. */
-  def FilaTiquete(primeiro: Int, comprarTiquete: Seq[![Int]], sairCaixa: Seq[?[Int]], chegouFilaCatraca: Seq[![Int]]) = proc {
+  /* Adiciona estudantes à fila do tíquete.
+   * primeiro: id do primeiro estudante.
+   * chegouFilaTiquete: canal para comunicar o novo estudante à fila. */
+  def NovosEstudantes(primeiro: Int, chegouFilaTiquete: ![Int]) = proc {
     var prox: Int = primeiro
-    var filaTiq = List[Int]() // Lista representando os estudantes na fila
-    var estudante: Int = 0 // Variavel para o estudante no começo da fila
-    var caixa: Int = 0 // Variável para o id do caixa no qual um estudante vai comprar o tíquete
-    var tiq: Int = 0 // Variavel com o id da catraca para a qual o estudante deve ir
-
+    
     // 'Escolha interna'
     val seed = new Random(System.currentTimeMillis())
     var res: Int = 0
     
-    while (true) {
-      if (prox < MAX_ESTUDANTES) {
-        println("#" + prox + " chegou no RU.")
+    while (prox < MAX_ESTUDANTES) {
+      println("#" + prox + " chegou no RU.")
         
-        res = seed.nextInt(2)+1
-        res match {
-          case 1 =>
-            filaTiq = filaTiq ::: List(prox)
-            println("#" + prox + " entrou na fila para comprar o Tiquete")
-          case 2 =>
-            println("#" + prox + " desistiu da fila")
-        }
-        prox = proxEstudante(prox)
+      res = seed.nextInt(10)
+      if (res < 6) { // 60% de chance de não desistir
+        chegouFilaTiquete!prox
+        println("#" + prox + " entrou na fila para comprar o Tiquete")
+      } else {
+        println("#" + prox + " desistiu da fila")
       }
+        
+      prox = proxEstudante(prox)
+    }
+  }
+  
+  /* Avança os estudantes na fila, sincronizando com o processo 'Caixas'.
+  *  - primeiro: id do primeiro estudante a chegar. 
+  *  - comprarTiquete, sairCaixa: canais de sic. com o caixa. 
+  *  - chegouFilaCatraca: canal de sic. com a fila para as catracas. */
+  def FilaTiquete(chegouFilaTiquete: ?[Int], comprarTiquete: Seq[![Int]]) = proc {
+    var filaTiq = List[Int]() // Lista representando os estudantes na fila
+    var estudante: Int = 0 // Variavel para o estudante no começo da fila
+    var caixa: Int = 0 // Variável para o id do caixa no qual um estudante vai comprar o tíquete
+    var tiq: Int = 0 // Variavel com o id da catraca para a qual o estudante deve ir
+    
+    val seed = new Random(System.currentTimeMillis())
+    
+    while (true) {
+      alt ( (true &&& chegouFilaTiquete) =?=> { est => filaTiq = filaTiq ::: List(est)} )
       
       if (filaTiq.length > 0) {
         estudante = filaTiq.head
-
-        // Com entrada do console
-        /*println("#" + estudante + " digite o caixa em que quer comprar o tíquete (0-" + (MAX_CAIXAS-1) + "): ")
-        caixa = Console.readInt()*/
         
-        // Aleatório
         caixa = seed.nextInt(MAX_CAIXAS)
-        
         comprarTiquete(caixa)!estudante
-        tiq = sairCaixa(caixa)?;
-        println("#" + estudante + " comprou o tiquete para a catraca #" + tiq)
 
-        chegouFilaCatraca(tiq)!estudante
-        
         filaTiq = filaTiq.tail // Atualiza a fila
       }
-
     }
   }
 
   /* Avança os estudantes na fila sincronizando com o processo 'FilaTiquete'.
   *  - i: id do caixa.
   *  - comprarTiquete, sairCaixa: canais de sic. com o caixa. */
-  def Caixa(i: Int, comprarTiquete: Seq[?[Int]], sairCaixa: Seq[![Int]]) = proc {
+  def Caixa(i: Int, comprarTiquete: Seq[?[Int]], chegouFilaCatraca: Seq[![Int]]) = proc {
     var estudante: Int = 0
+    var cat: Int = 0
     
     while (true) {
-      estudante = comprarTiquete(i)? ;
+      estudante = comprarTiquete(i)?;
       println("#" + estudante + " entrou no caixa #" + i)
 
-      if (estudante%2 == 1) 
-        sairCaixa(i)!0
-      else 
-        sairCaixa(i)!1
+      cat = (estudante + 1) % 2
+      
+      chegouFilaCatraca(cat)!estudante
+      println("#" + estudante + " comprou o tiquete para a catraca #" + cat)
     }
   }
 
@@ -170,6 +161,7 @@ object NomeEspec {
         
       if (filaCom.length > 0) {
         estudante = filaCom.head
+        println("#" + estudante + " pegou a bandeja")
         println("#" + estudante + " pegou o prato")
         println("#" + estudante + " pegou a comida")
         println("#" + estudante + " pegou o suco")
@@ -188,7 +180,7 @@ object NomeEspec {
    * pickup, putdown: eventos de sincronização com os garfos, FORKS.
    * procurarLixeira: evento de sincronização para obter acesso à lixeira.
    * saiuRU: evento que indica que o estudante saiu do restaurante. */
-  def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], procurarLixeira: ![Int], saiuRU: ![Unit]) = proc {
+  def Estudante(i: Int, procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], procurarLixeira: ![Int], podeSair: Seq[?[Unit]], saiuRU: ![Unit]) = proc {
     var pronto: Boolean = false // Pronto para procurar uma cadeira
     var sentado: Boolean = false
     
@@ -264,15 +256,16 @@ object NomeEspec {
         
         if (left && right) { // Possui acesso aos dois garfos
           println("#" + i + " está comendo")
+          println("#" + i + " bebeu suco")
         } else if (!left && !right){ // Já devolveu os dois garfos
           println("#" + i + " vai sair do RU? Digite 0 ou 1:")
           act = in.nextInt()
           
           if (act == 1) {
             procurarLixeira!i
+            podeSair(i)?;
             saiuRU!()
             println("#" + i + " saiu do RU")
-            
             System.exit(0) // Termina o processo
           }
         }
@@ -286,8 +279,8 @@ object NomeEspec {
   }
   
   /* Processos 'Estudante' executando em paralelo. */
-  def Estudantes(procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], procurarLixeira: ![Int], saiuRU: ![Unit]) = proc {
-    (|| ( for (i <- 0 until MAX_ESTUDANTES) yield Estudante(i, procurarCadeira, sentar, levantar, responder, pickup, putdown, procurarLixeira, saiuRU) ))() 
+  def Estudantes(procurarCadeira: Seq[?[Unit]], sentar: Seq[![Unit]], levantar: Seq[![Unit]], responder: Seq[?[Boolean]], pickup: Seq[?[Unit]], putdown: Seq[![Unit]], procurarLixeira: ![Int], podeSair: Seq[?[Unit]], saiuRU: ![Unit]) = proc {
+    (|| ( for (i <- 0 until MAX_ESTUDANTES) yield Estudante(i, procurarCadeira, sentar, levantar, responder, pickup, putdown, procurarLixeira, podeSair, saiuRU) ))() 
   }
   
   /* Processo que representa um garfo.
@@ -327,27 +320,29 @@ object NomeEspec {
   }
   
   /* Processo que representa a 'Lixeira' */
-  def Lixeira(procurarLixeira: ?[Int]) = proc {
+  def Lixeira(procurarLixeira: ?[Int], podeSair: Seq[![Unit]]) = proc {
     var estudante: Int = 0
 
     while (true) {
       estudante = procurarLixeira?;
       println("#" + estudante + " jogou fora o resto de comida e o copo.")
       println("#" + estudante + " jogou devolveu a bandeja e o prato.")
+      
+      podeSair(estudante)!()
     }
   }
   
   def RU() = proc {
 
-    // Declarar canais...    
-    val comprarTiquete = ManyMany[Int](MAX_CAIXAS)
-    val sairCaixa = ManyMany[Int](MAX_CAIXAS)
+    // Declarar canais...
+    val chegouFilaTiquete = OneOne[Int]
+    val comprarTiquete = OneMany[Int](MAX_CAIXAS)
     val chegouFilaCatraca = ManyMany[Int](MAX_CAIXAS)
     
-    val consulta = ManyMany[Unit]
-    val libera = ManyMany[Unit]
-    val barra = ManyMany[Unit]
-    val saiuRU = ManyMany[Unit]
+    val consulta = ManyOne[Unit]
+    val libera = OneMany[Unit]
+    val barra = OneMany[Unit]
+    val saiuRU = ManyOne[Unit]
     
     val chegouFilaComida = ManyMany[Int]
     
@@ -361,10 +356,13 @@ object NomeEspec {
     val putdown = ManyMany[Unit](MAX_CADEIRAS)
     
     val procurarLixeira = ManyMany[Int]
+    val podeSair = OneMany[Unit](MAX_ESTUDANTES)
     
-    (FilaTiquete(0, comprarTiquete, sairCaixa, chegouFilaCatraca)() 
+    (NovosEstudantes(0, chegouFilaTiquete)
         ||
-      Caixas(comprarTiquete, sairCaixa)()
+      FilaTiquete(chegouFilaTiquete, comprarTiquete)() 
+        ||
+      Caixas(comprarTiquete, chegouFilaCatraca)()
         ||
       FilasCatraca(chegouFilaCatraca, consulta, libera, barra, chegouFilaComida)()
         ||
@@ -372,13 +370,13 @@ object NomeEspec {
         ||
       FilaComida(chegouFilaComida, procurarCadeira)()
         ||
-      Estudantes(procurarCadeira, sentar, levantar, responder, pickup, putdown, procurarLixeira, saiuRU)()
+      Estudantes(procurarCadeira, sentar, levantar, responder, pickup, putdown, procurarLixeira, podeSair, saiuRU)()
         ||
       Cadeiras(sentar, levantar, responder)()
         || 
       FORKS(pickup, putdown)()
         ||
-      Lixeira(procurarLixeira)()
+      Lixeira(procurarLixeira, podeSair)()
     )()
     
   }
