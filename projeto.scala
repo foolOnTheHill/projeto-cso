@@ -3,7 +3,7 @@ import ox.Format._
 import java.util.Random
 import java.util.Scanner
 
-object NomeEspec {
+object ProjetoRU {
   //--------------------------------  Constantes
   val MAX_ESTUDANTES = 20
   val MAX_CADEIRAS = 3
@@ -336,9 +336,10 @@ object NomeEspec {
     }
   }
   
+  /* Processo principal */
   def RU() = proc {
 
-    // Declarar canais...
+    // Declarando canais...
     val chegouFilaTiquete = OneOne[Int]
     val comprarTiquete = OneMany[Int](MAX_CAIXAS)
     val chegouFilaCatraca = ManyMany[Int](MAX_CAIXAS)
