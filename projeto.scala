@@ -266,6 +266,7 @@ object ProjetoRU {
           act = in.nextInt()
           
           if (act == 1) {
+            levantar(cadeira)!()
             procurarLixeira!i
             podeSair(i)?;
             saiuRU!()
